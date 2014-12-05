@@ -1,0 +1,19 @@
+<adclock>
+	<timezone>Australia/Sydney</timezone>
+	
+	<hrs>
+		<tensfsd></tensfsd>
+		<unitsfsd></unitsfsd>
+	</hrs>
+	
+	<mins>
+		<tensfsd></tensfsd>
+		<unitsfsd></unitsfsd>
+	</mins>
+	
+	<secs>
+		<tensfsd></tensfsd>
+		<unitsfsd></unitsfsd>
+	</secs>
+	
+</adclock>
