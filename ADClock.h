@@ -32,6 +32,7 @@
 using namespace std;
 
 class TLV5625;
+class TiXmlElement;
 
 class ADClock{
 	
@@ -44,20 +45,27 @@ class ADClock{
 		void run();
 		
 	private:
+		
+		enum TestMode {NO_TEST,ZERO_DACS,FSD_DACS,RAMP_DACS};
+		
 		static void signalHandler(int sig);
 		
 		void init(int,char **);
 		string getConfigPath();
 		bool readConfig(string);
+		void readDACconfig(TiXmlElement*,double *,double *);
+		bool getInt(const char *, int *,string);
+		bool getDouble(const char *, double *,string);
 		
 		void showHelp();
 		void showVersion();
 		void showLicense();
 		void runDACtest(std::string, TLV5625 *, int );
+		void waitForKeyPress();
 		
 		string timestamp();
 		
-		bool testDACs;
+		int  testMode;
 		
 		string logFileName;
 		string debugFileName;
@@ -68,7 +76,7 @@ class ADClock{
 		string timezone;
 		
 		TLV5625 *hrsDAC,*minsDAC,*secsDAC;
-		int hrsUnitsFSD,hrsTensFSD,minsUnitsFSD,minsTensFSD,secsUnitsFSD,secsTensFSD;
+		double hrsUnitsCal,hrsTensCal,minsUnitsCal,minsTensCal,secsUnitsCal,secsTensCal;
 };
 
 #endif

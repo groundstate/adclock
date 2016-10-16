@@ -28,7 +28,10 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <errno.h>
+#include <limits.h>
 
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 
@@ -49,11 +52,11 @@ extern ostream *debugStream;
 ADClock::ADClock(int argc,char **argv)
 {
 	debugStream= NULL;
-	testDACs=false;
+	testMode=NO_TEST;
 	logFileName = string(APP_NAME) + ".log";
 	int c;
 	
-	while ((c=getopt(argc,argv,"d:hltv")) != -1){
+	while ((c=getopt(argc,argv,"d:fhlrvz")) != -1){
 		switch(c){
 			case 'h':showHelp(); exit(EXIT_SUCCESS);
 			case 'v':showVersion();exit(EXIT_SUCCESS);
@@ -74,14 +77,25 @@ ADClock::ADClock(int argc,char **argv)
 				}
 				break;
 			}
+			case 'f':
+			{
+				testMode = FSD_DACS;
+				break;
+			}
 			case 'l':
 			{
 				showLicense();
 				exit(EXIT_SUCCESS);
 			}
-			case 't':
+			case 'r':
 			{
-				testDACs=true;
+				testMode= RAMP_DACS;
+				break;
+			}
+			case 'z':
+			{
+				testMode= ZERO_DACS;
+				break;
 			}
 			default:
 				break;
@@ -95,8 +109,10 @@ ADClock::ADClock(int argc,char **argv)
 	tzset();
 	
 	secsDAC=new TLV5625(15,14,115);
-	minsDAC=new TLV5625(60,50,51);
-	hrsDAC=new TLV5625(3,2,49);
+	minsDAC=new TLV5625(49,3,2);
+	//hrsDAC=new TLV5625(60,50,51); // this is for the PCB as designed
+	hrsDAC=new TLV5625(30,50,51);   // and this is a hack for my dead GPIO
+	
 	
 }
 
@@ -116,31 +132,49 @@ ADClock::~ADClock()
 
 void ADClock::run()
 {
-	if (testDACs){
-		runDACtest("Seconds - units",secsDAC,1);
-		runDACtest("Seconds - tens",secsDAC,2);
-		runDACtest("Minutes - units",minsDAC,1);
-		runDACtest("Minutes - tens",minsDAC,2);
-		runDACtest("Hours - units",hrsDAC,1);
-		runDACtest("Hours - tens",hrsDAC,2);
-		delete this;
+	switch (testMode)
+	{
+		case ZERO_DACS:
+			hrsDAC->writeDACs(0,0);
+			minsDAC->writeDACs(0,0);
+			secsDAC->writeDACs(0,0);
+			waitForKeyPress();
+			delete this;
+			break;
+		case FSD_DACS:
+			hrsDAC->writeDACs(255,255);
+			minsDAC->writeDACs(255,255);
+			secsDAC->writeDACs(255,255);
+			waitForKeyPress();
+			delete this;
+			break;
+		case RAMP_DACS:
+			runDACtest("Seconds - units",secsDAC,1);
+			runDACtest("Seconds - tens",secsDAC,2);
+			runDACtest("Minutes - units",minsDAC,1);
+			runDACtest("Minutes - tens",minsDAC,2);
+			runDACtest("Hours - units",hrsDAC,1);
+			runDACtest("Hours - tens",hrsDAC,2);
+			delete this;
+			break;
+		default:
+			break;
 	}
 	
 	 while (1){
-		 struct timeval tv;
-		 gettimeofday(&tv,NULL);
-		 usleep(1000000-tv.tv_usec);
-		 gettimeofday(&tv,NULL);
-		 struct tm *ltm = localtime(&tv.tv_sec);
-		 DBGMSG(debugStream,tv.tv_usec << ": " << ltm->tm_min << " " << ltm->tm_sec);
-		 //
-		 unsigned short int tens=ltm->tm_sec/10;
-		 unsigned short int units=ltm->tm_sec-10*tens;
-		 tens=tens*secsTensFSD/5;
-		 units=units*secsUnitsFSD/9;
-		 secsDAC->writeDACs(units,tens);
-		
-	 }
+		struct timeval tv;
+		gettimeofday(&tv,NULL);
+		usleep(1000000-tv.tv_usec);
+		gettimeofday(&tv,NULL);
+		struct tm *ltm = localtime(&tv.tv_sec);
+		DBGMSG(debugStream,tv.tv_usec << ": " << ltm->tm_min << " " << ltm->tm_sec);
+		//
+		unsigned short int tens=ltm->tm_sec/10;
+		unsigned short int units=ltm->tm_sec-10*tens;
+		tens=tens*secsTensCal/5.0;
+		units=units*secsUnitsCal/10.0;
+		secsDAC->writeDACs(tens,units);
+	}
 }
 
 void ADClock::log(string msg)
@@ -160,14 +194,14 @@ void ADClock::init(int,char **)
 	// Set defaults
 	timezone = "UTC";
 	
-	hrsUnitsFSD=255*0.9;
-	hrsTensFSD=255*0.4;
+	hrsUnitsCal=255.0;
+	hrsTensCal=255.0;
 	
-	minsUnitsFSD=255*0.9;
-	minsTensFSD=255;
+	minsUnitsCal=255.0;
+	minsTensCal=255.0;
 	
-	secsUnitsFSD=255*0.9;
-	secsTensFSD=255;
+	secsUnitsCal=255.0;
+	secsTensCal=255.0;
 	
 	appLog.open(logFileName.c_str(),ios_base::app);
 	if (!appLog.is_open()){
@@ -261,9 +295,54 @@ bool ADClock::readConfig(string configPath)
 			if (text)
 				timezone = text;
 		}
-	}	
+		else if (0 == strcmp(elem->Value(),"hours")){
+			readDACconfig(elem,&hrsUnitsCal,&hrsTensCal);
+		}
+	}
 	
 	return true;
+}
+
+void ADClock::readDACconfig(TiXmlElement* root,double *units,double *tens)
+{
+	for ( TiXmlElement* elem = root->FirstChildElement();elem;elem = elem->NextSiblingElement() ){
+		if (0 == strcmp(elem->Value(),"unitscal"))
+				getDouble(elem->GetText(),units,"Invalid value for unitscal");
+		else if (0 == strcmp(elem->Value(),"tenscal"))
+				getDouble(elem->GetText(),tens,"Invalid value for tenscal");
+	}
+}
+
+bool ADClock::getInt(const char *txt,int *val,string msg){
+	int tmp;
+	if (txt){
+		errno=0;
+		char *endptr;
+		tmp =  strtol(txt,&endptr,10); 
+		if ((endptr==txt) || (errno == ERANGE && (tmp == HUGE_VALL || tmp == -HUGE_VALL)) || (errno != 0 && tmp == 0)) {
+			log(msg);
+			return false;
+		}
+		*val=tmp;
+		return true;
+	}
+	return false;
+}
+
+bool ADClock::getDouble(const char *txt, double *val,string msg){
+	double tmp;
+	if (txt){
+		errno=0;
+		char *endptr;
+		tmp =  strtod(txt,&endptr); 
+		if ((endptr==txt) || (errno == ERANGE && (tmp == HUGE_VAL || tmp == -HUGE_VAL)) || (errno != 0 && tmp == 0)) {
+			log(msg);
+			return false;
+		}
+		*val=tmp;
+		return true;
+	}
+	return false;
 }
 
 void ADClock::showHelp()
@@ -272,9 +351,11 @@ void ADClock::showHelp()
 	cout << "Available options are" << endl;
 	cout << "\t-d <file> Turn on debugging to <file> (use 'stderr' for output to stderr)" << endl;
 	cout << "\t-h  Show this help" << endl;
+	cout << "\t-r  Set DACs FSD" << endl;
 	cout << "\t-l  Show license" << endl;
-	cout << "\t-t  Test DACs" << endl;
+	cout << "\t-r  Ramp DACs" << endl;
 	cout << "\t-v  Show version" << endl;
+	cout << "\t-z  Set all DACS to zero" << endl;
 }
 
 void ADClock::showVersion()
@@ -329,6 +410,12 @@ void ADClock::runDACtest(std::string msg, TLV5625 *dac, int chan)
 			dac->writeDACs(0,(unsigned short int) i);
 		usleep(5000);
 	}
+}
+
+void ADClock::waitForKeyPress()
+{
+	cout << "Press ENTER to quit" << endl;
+	cin.get();
 }
 
 string ADClock::timestamp()

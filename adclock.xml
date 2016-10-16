@@ -1,19 +1,21 @@
 <adclock>
+	<!-- path is relative to /usr/share/zoneinfo -->
 	<timezone>Australia/Sydney</timezone>
 	
-	<hrs>
-		<tensfsd></tensfsd>
-		<unitsfsd></unitsfsd>
+	<hours>
+		<!-- calibration factors are defined as (max_reading/full_scale_reading)*255 -->
+		<tenscal></tenscal>
+		<unitscal></unitscal>
 	</hrs>
 	
-	<mins>
-		<tensfsd></tensfsd>
-		<unitsfsd></unitsfsd>
+	<minutes>
+		<tenscal></tenscal>
+		<unitscal></unitscal>
 	</mins>
 	
-	<secs>
-		<tensfsd></tensfsd>
-		<unitsfsd></unitsfsd>
+	<seconds>
+		<tenscal></tenscal>
+		<unitscal></unitscal>
 	</secs>
 	
 </adclock>

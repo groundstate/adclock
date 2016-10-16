@@ -1,5 +1,5 @@
 
-gnssview - displays GNSS satellite tracks
+adclock- an analog digital clock for the Beaglebone Black
 
 The MIT License (MIT)
 
