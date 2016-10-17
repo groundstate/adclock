@@ -3,7 +3,7 @@
 	<timezone>Australia/Sydney</timezone>
 	
 	<hours>
-		<!-- calibration factors are defined as (max_reading/full_scale_reading)*255 -->
+		<!-- calibration factors are defined as (DAC value for max deflection) / (max digit on meter) -->
 		<tenscal></tenscal>
 		<unitscal></unitscal>
 	</hrs>

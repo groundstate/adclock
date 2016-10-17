@@ -142,9 +142,9 @@ void ADClock::run()
 			delete this;
 			break;
 		case FSD_DACS:
-			hrsDAC->writeDACs(255,255);
-			minsDAC->writeDACs(255,255);
-			secsDAC->writeDACs(255,255);
+			hrsDAC->writeDACs(2*hrsTensCal,9*hrsUnitsCal);
+			minsDAC->writeDACs(5*minsTensCal,9*minsUnitsCal);
+			secsDAC->writeDACs(5*secsTensCal,9*secsUnitsCal);
 			waitForKeyPress();
 			delete this;
 			break;
@@ -171,9 +171,23 @@ void ADClock::run()
 		//
 		unsigned short int tens=ltm->tm_sec/10;
 		unsigned short int units=ltm->tm_sec-10*tens;
-		tens=tens*secsTensCal/5.0;
-		units=units*secsUnitsCal/10.0;
+		tens=tens*secsTensCal;
+		units=units*secsUnitsCal;
 		secsDAC->writeDACs(tens,units);
+		
+		tens=ltm->tm_min/10;
+		units=ltm->tm_min-10*tens;
+		tens=tens*minsTensCal;
+		units=units*minsUnitsCal;
+		minsDAC->writeDACs(tens,units);
+		
+		tens=ltm->tm_hour/10;
+		units=ltm->tm_hour-10*tens;
+		tens=tens*hrsTensCal;
+		units=units*hrsUnitsCal;
+		hrsDAC->writeDACs(tens,units);
+		
+		
 	}
 }
 
@@ -194,14 +208,15 @@ void ADClock::init(int,char **)
 	// Set defaults
 	timezone = "UTC";
 	
-	hrsUnitsCal=255.0;
-	hrsTensCal=255.0;
+	/* Cal factor is (DAC value for max deflection) / (max digit on meter) */
+	hrsUnitsCal=235.0/10.0;
+	hrsTensCal=242.0/5.0;
 	
-	minsUnitsCal=255.0;
-	minsTensCal=255.0;
+	minsUnitsCal=235.0/10.0;
+	minsTensCal=240.0/5.0;
 	
-	secsUnitsCal=255.0;
-	secsTensCal=255.0;
+	secsUnitsCal=235.0/10.0;
+	secsTensCal=240.0/5.0;
 	
 	appLog.open(logFileName.c_str(),ios_base::app);
 	if (!appLog.is_open()){
@@ -298,6 +313,12 @@ bool ADClock::readConfig(string configPath)
 		else if (0 == strcmp(elem->Value(),"hours")){
 			readDACconfig(elem,&hrsUnitsCal,&hrsTensCal);
 		}
+		else if (0 == strcmp(elem->Value(),"minutes")){
+			readDACconfig(elem,&minsUnitsCal,&minsTensCal);
+		}
+		else if (0 == strcmp(elem->Value(),"seconds")){
+			readDACconfig(elem,&secsUnitsCal,&secsTensCal);
+		}
 	}
 	
 	return true;
@@ -351,7 +372,7 @@ void ADClock::showHelp()
 	cout << "Available options are" << endl;
 	cout << "\t-d <file> Turn on debugging to <file> (use 'stderr' for output to stderr)" << endl;
 	cout << "\t-h  Show this help" << endl;
-	cout << "\t-r  Set DACs FSD" << endl;
+	cout << "\t-f  Set DACs FSD" << endl;
 	cout << "\t-l  Show license" << endl;
 	cout << "\t-r  Ramp DACs" << endl;
 	cout << "\t-v  Show version" << endl;
