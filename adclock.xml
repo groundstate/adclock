@@ -6,16 +6,16 @@
 		<!-- calibration factors are defined as (DAC value for max deflection) / (max digit on meter) -->
 		<tenscal></tenscal>
 		<unitscal></unitscal>
-	</hrs>
+	</hours>
 	
 	<minutes>
 		<tenscal></tenscal>
 		<unitscal></unitscal>
-	</mins>
+	</minutes>
 	
 	<seconds>
 		<tenscal></tenscal>
 		<unitscal></unitscal>
-	</secs>
+	</seconds>
 	
 </adclock>

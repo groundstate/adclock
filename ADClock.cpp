@@ -149,12 +149,12 @@ void ADClock::run()
 			delete this;
 			break;
 		case RAMP_DACS:
-			runDACtest("Seconds - units",secsDAC,1);
-			runDACtest("Seconds - tens",secsDAC,2);
-			runDACtest("Minutes - units",minsDAC,1);
-			runDACtest("Minutes - tens",minsDAC,2);
-			runDACtest("Hours - units",hrsDAC,1);
-			runDACtest("Hours - tens",hrsDAC,2);
+			runDACtest("Seconds - units",secsDAC,2);
+			runDACtest("Seconds - tens",secsDAC,1);
+			runDACtest("Minutes - units",minsDAC,2);
+			runDACtest("Minutes - tens",minsDAC,1);
+			runDACtest("Hours - units",hrsDAC,2);
+			runDACtest("Hours - tens",hrsDAC,1);
 			delete this;
 			break;
 		default:
@@ -292,7 +292,8 @@ bool ADClock::readConfig(string configPath)
 {
 	TiXmlDocument doc( configPath.c_str() );
   if (!doc.LoadFile()){
-		cerr << "The configuration file could not be opened" << endl;
+		cerr << "Error loading document: " << doc.ErrorDesc() << endl;
+		cerr << "The configuration file " << configPath << " could not be opened" << endl;
 		return false;
 	}
 	
