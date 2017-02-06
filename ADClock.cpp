@@ -267,13 +267,15 @@ string ADClock::getConfigPath()
 		return cfgPath;
 	
 	char *homedir = getenv("HOME");
+	if (homedir){ // may be running as a system service without HOME
 	cfgPath= string(homedir) +string("/adclock/adclock.xml");
-	if ((0 == stat(cfgPath.c_str(),&statbuf)))
-		return cfgPath;
+		if ((0 == stat(cfgPath.c_str(),&statbuf)))
+			return cfgPath;
 
-	cfgPath= string(homedir) + string("/.adclock/adclock.xml");
-	if ((0 == stat(cfgPath.c_str(),&statbuf)))
-		return cfgPath;
+		cfgPath= string(homedir) + string("/.adclock/adclock.xml");
+		if ((0 == stat(cfgPath.c_str(),&statbuf)))
+			return cfgPath;
+	}
 	
 	cfgPath= "/usr/local/share/adclock/adclock.xml";
 	if ((0 == stat(cfgPath.c_str(),&statbuf)))

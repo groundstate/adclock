@@ -1,6 +1,6 @@
 USER=root
 USERGROUP=root
-BINDIR = /usr/local/bin
+BINDIR = /usr/bin
 CC = g++ -O2 -Wall   
 RM = rm -f
 DEFINES=-DDEBUG
@@ -36,5 +36,10 @@ tinyxmlparser.o:tinyxmlparser.cpp
 install:
 	-/bin/cp ./adclock $(BINDIR)
 	chown root.$(USERGROUP) $(BINDIR)/adclock
+	mkdir -p /usr/share/adclock
+	-/bin/cp adclock.xml  /usr/share/adclock
+	-/bin/cp adclock.service /lib/systemd/system/
+	systemctl --system daemon-reload
+	systemctl enable adclock
 clean:
 	$(RM) *.o adclock

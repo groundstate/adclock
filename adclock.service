@@ -1,0 +1,9 @@
+[Unit]
+Description=Analog digital clock driver
+
+[Service]
+ExecStart=/usr/bin/adclock
+SyslogIdentifier=adclock
+
+[Install]
+WantedBy=multi-user.target
